@@ -21,13 +21,14 @@ connectMongoDB();
 const app = express();
 const httpServer = createServer(app);
 
-// allowed origins
+// ✅ Allowed origins (no trailing slashes!)
 const ALLOWED_ORIGINS = [
   "http://localhost:8080",
   "http://localhost:5173",
-  "https://ai-interview-platfrom-2mc3hx3il-nitinpratap22061s-projects.vercel.app/",
+  "https://ai-interview-platfrom-2mc3hx3il-nitinpratap22061s-projects.vercel.app",
 ].filter(Boolean);
 
+// ✅ CORS setup for Express
 app.use(
   cors({
     origin: (origin, cb) => {
@@ -39,21 +40,26 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(express.json());
 
+// Routes
 app.use("/api/auth", authRoute);
 app.use("/api/interviews", interviewRoute);
 
-// socket.io
+// ✅ Socket.IO with proper CORS
 const io = new SocketServer(httpServer, {
   cors: {
-    origin: ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS : "*",
+    origin: (origin, cb) => {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      return cb(new Error("CORS violation"));
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },
 });
 
-// auth
+// ✅ Socket authentication middleware
 io.use(async (socket, next) => {
   try {
     const token =
@@ -73,7 +79,7 @@ io.use(async (socket, next) => {
   }
 });
 
-// connection
+// ✅ Socket connection logic (unchanged)
 io.on("connection", (socket) => {
   console.log(`✅ Socket connected: ${socket.id} user: ${socket.user?.id}`);
 
@@ -84,9 +90,8 @@ io.on("connection", (socket) => {
   let topic = "";
   let startedAt = new Date();
   let lastQuestion = "";
-  let interviewEnded = false; // ✅ flag added
+  let interviewEnded = false;
 
-  // startInterview
   socket.on("startInterview", async ({ topic_id, topic_name }) => {
     try {
       let topicUUID = null;
@@ -137,14 +142,12 @@ io.on("connection", (socket) => {
     }
   });
 
-  // submitAnswer
   socket.on("submitAnswer", async ({ previousAnswer }) => {
     try {
-      if (interviewEnded) return; // ✅ stop further processing if already ended
+      if (interviewEnded) return;
 
       const answerText = previousAnswer?.trim() || "";
 
-      // ---- Robust Abuse & Exit Detection ----
       const abusiveWords = [
         "fuck",
         "shit",
@@ -174,7 +177,6 @@ io.on("connection", (socket) => {
 
       const lowerAnswer = answerText.toLowerCase();
 
-      // Terminate interview if abuse detected
       if (abusiveWords.some((w) => lowerAnswer.includes(w))) {
         const durationMins = Math.round((new Date() - startedAt) / 60000);
         const feedback = {
@@ -198,7 +200,7 @@ io.on("connection", (socket) => {
           })
           .eq("id", interviewId);
 
-        interviewEnded = true; // ✅ mark ended
+        interviewEnded = true;
         socket.emit("interviewFinished", {
           message: feedback.summary,
           ...feedback,
@@ -207,7 +209,6 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // Terminate interview if user refuses / exits / diverts
       if (
         exitPhrases.some((p) => lowerAnswer.includes(p)) ||
         lowerAnswer.includes("play cricket") ||
@@ -238,7 +239,7 @@ io.on("connection", (socket) => {
           })
           .eq("id", interviewId);
 
-        interviewEnded = true; // ✅ mark ended
+        interviewEnded = true;
         socket.emit("interviewFinished", {
           message: feedback.summary,
           ...feedback,
@@ -247,7 +248,6 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // ---- Normal flow ----
       transcript.push({ question: lastQuestion, answer: answerText });
 
       socket.emit("answerFeedback", {
@@ -257,7 +257,6 @@ io.on("connection", (socket) => {
             : "Answer too short, elaborate more.",
       });
 
-      // max questions reached
       if (questionCount >= MAX_QUESTIONS) {
         const durationMins = Math.round((new Date() - startedAt) / 60000);
         const aiEval = await evaluateTranscript(transcript);
@@ -274,7 +273,7 @@ io.on("connection", (socket) => {
           })
           .eq("id", interviewId);
 
-        interviewEnded = true; // ✅ mark ended
+        interviewEnded = true;
         socket.emit("interviewFinished", {
           message: "Interview complete!",
           ...aiEval,
@@ -283,7 +282,6 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // next question
       const nextQ = await getNextInterviewQuestion(
         answerText,
         topic,
