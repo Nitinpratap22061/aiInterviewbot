@@ -21,16 +21,16 @@ connectMongoDB();
 const app = express();
 const httpServer = createServer(app);
 
-// ✅ Allowed origins (no trailing slashes!)
+// ✅ Updated Allowed Origins (Added latest Vercel URL)
 const ALLOWED_ORIGINS = [
   "http://localhost:8080",
   "http://localhost:5173",
-  "https://ai-interview-platfrom-2mc3hx3il-nitinpratap22061s-projects.vercel.app",
   "https://ai-interview-platfrom.vercel.app",
+  "https://ai-interview-platfrom-2mc3hx3il-nitinpratap22061s-projects.vercel.app",
   "https://ai-interview-platfrom-5esb2h9ka-nitinpratap22061s-projects.vercel.app",
 ].filter(Boolean);
 
-// ✅ CORS setup for Express
+// ✅ CORS for Express
 app.use(
   cors({
     origin: (origin, cb) => {
@@ -76,12 +76,12 @@ io.use(async (socket, next) => {
     socket.user = data.user;
     next();
   } catch (err) {
-    console.error("socket auth error", err);
+    console.error("Socket auth error", err);
     next(new Error("Auth failed"));
   }
 });
 
-// ✅ Socket connection logic (unchanged)
+// ✅ Socket connection logic
 io.on("connection", (socket) => {
   console.log(`✅ Socket connected: ${socket.id} user: ${socket.user?.id}`);
 
