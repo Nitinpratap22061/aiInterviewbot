@@ -27,6 +27,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "https://ai-interview-platfrom-2mc3hx3il-nitinpratap22061s-projects.vercel.app",
   "https://ai-interview-platfrom.vercel.app",
+  "https://ai-interview-platfrom-5esb2h9ka-nitinpratap22061s-projects.vercel.app",
 ].filter(Boolean);
 
 // ✅ CORS setup for Express
