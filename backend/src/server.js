@@ -21,7 +21,7 @@ connectMongoDB();
 const app = express();
 const httpServer = createServer(app);
 
-// ✅ Updated Allowed Origins (Added latest Vercel URL)
+// ✅ Allowed Origins
 const ALLOWED_ORIGINS = [
   "http://localhost:8080",
   "http://localhost:5173",
@@ -30,14 +30,10 @@ const ALLOWED_ORIGINS = [
   "https://ai-interview-platfrom-5esb2h9ka-nitinpratap22061s-projects.vercel.app",
 ].filter(Boolean);
 
-// ✅ CORS for Express
+// ✅ CORS for Express APIs
 app.use(
   cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-      return cb(new Error("CORS violation"));
-    },
+    origin: ALLOWED_ORIGINS,
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
@@ -52,10 +48,7 @@ app.use("/api/interviews", interviewRoute);
 // ✅ Socket.IO with proper CORS
 const io = new SocketServer(httpServer, {
   cors: {
-    origin: (origin, cb) => {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-      return cb(new Error("CORS violation"));
-    },
+    origin: ALLOWED_ORIGINS,
     methods: ["GET", "POST"],
     credentials: true,
   },
