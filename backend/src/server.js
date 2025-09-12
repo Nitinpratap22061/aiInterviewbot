@@ -21,19 +21,10 @@ connectMongoDB();
 const app = express();
 const httpServer = createServer(app);
 
-// ✅ Allowed Origins
-const ALLOWED_ORIGINS = [
-  "http://localhost:8080",
-  "http://localhost:5173",
-  "https://ai-interview-platfrom.vercel.app",
-  "https://ai-interview-platfrom-2mc3hx3il-nitinpratap22061s-projects.vercel.app",
-  "https://ai-interview-platfrom-5esb2h9ka-nitinpratap22061s-projects.vercel.app",
-].filter(Boolean);
-
-// ✅ CORS for Express APIs
+// ✅ Allow all origins for Express
 app.use(
   cors({
-    origin: ALLOWED_ORIGINS,
+    origin: "*", // allow everything
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
@@ -45,10 +36,10 @@ app.use(express.json());
 app.use("/api/auth", authRoute);
 app.use("/api/interviews", interviewRoute);
 
-// ✅ Socket.IO with proper CORS
+// ✅ Socket.IO with open CORS
 const io = new SocketServer(httpServer, {
   cors: {
-    origin: ALLOWED_ORIGINS,
+    origin: "*", // allow all origins
     methods: ["GET", "POST"],
     credentials: true,
   },
