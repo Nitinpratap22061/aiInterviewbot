@@ -6,7 +6,10 @@ import { Server as SocketServer } from "socket.io";
 import dotenv from "dotenv";
 import { supabasePublic } from "./config/supabaseClient.js";
 import { connectMongoDB } from "./config/mongoClient.js";
-import { getNextInterviewQuestion, evaluateTranscript } from "./services/langchainService.js";
+import {
+  getNextInterviewQuestion,
+  evaluateTranscript,
+} from "./services/langchainService.js";
 
 // Routes
 import interviewRoute from "./routes/interviewRoutes.js";
@@ -23,7 +26,6 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8080",
   "http://localhost:5173",
   process.env.FRONTEND_ORIGIN,
-  "*" , 
 ].filter(Boolean);
 
 app.use(
@@ -82,6 +84,7 @@ io.on("connection", (socket) => {
   let topic = "";
   let startedAt = new Date();
   let lastQuestion = "";
+  let interviewEnded = false; // ✅ flag added
 
   // startInterview
   socket.on("startInterview", async ({ topic_id, topic_name }) => {
@@ -137,16 +140,36 @@ io.on("connection", (socket) => {
   // submitAnswer
   socket.on("submitAnswer", async ({ previousAnswer }) => {
     try {
+      if (interviewEnded) return; // ✅ stop further processing if already ended
+
       const answerText = previousAnswer?.trim() || "";
 
       // ---- Robust Abuse & Exit Detection ----
       const abusiveWords = [
-        "fuck", "shit", "bitch", "idiot", "stupid", "fool", "asshole",
-        "dumb", "bastard", "crap", "screw you"
+        "fuck",
+        "shit",
+        "bitch",
+        "idiot",
+        "stupid",
+        "fool",
+        "asshole",
+        "dumb",
+        "bastard",
+        "crap",
+        "screw you",
       ];
       const exitPhrases = [
-        "end interview", "stop interview", "finish interview",
-        "dont want to continue", "not interested", "quit" , "dont want to give interview"
+        "end interview",
+        "stop interview",
+        "finish interview",
+        "dont want to continue",
+        "not interested",
+        "quit",
+        "dont want to give interview",
+        "i want to end",
+        "i will not tell you",
+        "i am not telling",
+        "no more questions",
       ];
 
       const lowerAnswer = answerText.toLowerCase();
@@ -175,6 +198,7 @@ io.on("connection", (socket) => {
           })
           .eq("id", interviewId);
 
+        interviewEnded = true; // ✅ mark ended
         socket.emit("interviewFinished", {
           message: feedback.summary,
           ...feedback,
@@ -183,46 +207,45 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // Terminate interview if user refuses or uses exit phrases
-      // Terminate interview if user refuses, diverts, uses exit phrases, or ends abruptly
-if (
-  exitPhrases.some((p) => lowerAnswer.includes(p)) ||
-  lowerAnswer.includes("play cricket") || // example of diversion
-  lowerAnswer.includes("other topic")     // add more diversion triggers as needed
-) {
-  const durationMins = Math.round((new Date() - startedAt) / 60000);
+      // Terminate interview if user refuses / exits / diverts
+      if (
+        exitPhrases.some((p) => lowerAnswer.includes(p)) ||
+        lowerAnswer.includes("play cricket") ||
+        lowerAnswer.includes("other topic")
+      ) {
+        const durationMins = Math.round((new Date() - startedAt) / 60000);
 
-  const feedback = {
-    overallScore: 0,
-    strengths: [],
-    areasToImprove: [
-      "Candidate refused to answer or diverted from topic. Performance unacceptable."
-    ],
-    summary:
-      "⚠️ Interview ended due to candidate refusing/diverting from questions; performance considered very poor.",
-    raw: "",
-  };
+        const feedback = {
+          overallScore: 0,
+          strengths: [],
+          areasToImprove: [
+            "Candidate refused to answer or diverted from topic. Performance unacceptable.",
+          ],
+          summary:
+            "⚠️ Interview ended due to candidate refusing/diverting from questions; performance considered very poor.",
+          raw: "",
+        };
 
-  await supabasePublic
-    .from("interviews")
-    .update({
-      transcript,
-      completed_at: new Date().toISOString(),
-      duration_mins: durationMins,
-      score: 0,
-      questions_count: transcript.length,
-      ai_evaluation: feedback,
-    })
-    .eq("id", interviewId);
+        await supabasePublic
+          .from("interviews")
+          .update({
+            transcript,
+            completed_at: new Date().toISOString(),
+            duration_mins: durationMins,
+            score: 0,
+            questions_count: transcript.length,
+            ai_evaluation: feedback,
+          })
+          .eq("id", interviewId);
 
-  socket.emit("interviewFinished", {
-    message: feedback.summary,
-    ...feedback,
-    transcript,
-  });
-  return;
-}
-
+        interviewEnded = true; // ✅ mark ended
+        socket.emit("interviewFinished", {
+          message: feedback.summary,
+          ...feedback,
+          transcript,
+        });
+        return;
+      }
 
       // ---- Normal flow ----
       transcript.push({ question: lastQuestion, answer: answerText });
@@ -251,6 +274,7 @@ if (
           })
           .eq("id", interviewId);
 
+        interviewEnded = true; // ✅ mark ended
         socket.emit("interviewFinished", {
           message: "Interview complete!",
           ...aiEval,
@@ -278,9 +302,7 @@ if (
     }
   });
 
-  socket.on("disconnect", () =>
-    console.log(`Disconnected: ${socket.id}`)
-  );
+  socket.on("disconnect", () => console.log(`Disconnected: ${socket.id}`));
 });
 
 httpServer.listen(process.env.PORT || 5000, () =>
