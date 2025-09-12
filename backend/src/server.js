@@ -26,7 +26,6 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8080",
   "http://localhost:5173",
   "https://ai-interview-platfrom-2mc3hx3il-nitinpratap22061s-projects.vercel.app/",
-  process.env.FRONTEND_ORIGIN,
 ].filter(Boolean);
 
 app.use(
