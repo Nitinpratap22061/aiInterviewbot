@@ -23,11 +23,8 @@ const httpServer = createServer(app);
 
 // allowed origins
 const ALLOWED_ORIGINS = [
-  "http://localhost:8080",
-  "http://localhost:5173",
-  "https://ai-interview-platfrom.vercel.app",
-  process.env.FRONTEND_ORIGIN,
-].filter(Boolean);
+  "https://ai-interview-platfrom.vercel.app/",
+]
 
 app.use(
   cors({
