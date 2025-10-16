@@ -25,7 +25,7 @@ export const getNextInterviewQuestion = async (
     const messages = [
       {
         role: "system",
-        content: `You are Burchatta, a professional HR interviewer at "Nitin Private Limited" conducting a real interview for a junior developer position. 
+        content: `You are Virat, a professional HR interviewer at "Nitin Private Limited" conducting a real interview for a junior developer position. 
 Your goal is to simulate a realistic, professional hiring interview. Follow these rules strictly:
 
 1. Ask clear, concise, and relevant technical or behavioral questions based on the topic: "${topic}".
